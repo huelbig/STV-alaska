@@ -1,0 +1,539 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2759
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 # Import Packages needed\
+import geopandas as gpd\
+import pandas as pd\
+import numpy as np\
+import rasterio\
+import matplotlib.pyplot as plt\
+import rioxarray as rio\
+import os\
+import xarray as xr\
+import glob\
+from matplotlib import colors as mcolors\
+from matplotlib.lines import Line2D\
+from shapely.geometry import box\
+import seaborn as sns\
+from rasterio.plot import show\
+from shapely.geometry import Point\
+\
+#%% Upload shapefiles, align coordinate systems, spatial join\
+bawld_data = gpd.read_file('/Volumes/MastersWork/GDSthings/BAWLD_V1___Shapefile/BAWLD_V1.shp')\
+north_slope = gpd.read_file('/Volumes/MastersWork/GDSthings/BAWLD_V1___Shapefile/421-north-slope-borough-boundary/nsb_boundary.shp')\
+if bawld_data.crs != north_slope.crs:\
+    bawld_data = bawld_data.to_crs(north_slope.crs)\
+\
+alaska_bawld = gpd.sjoin(bawld_data, north_slope, how="inner", predicate="within")\
+alaska_bawld.to_file('/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/Alaska_BAWLD.shp')\
+\
+#%% Upload GSWO occurrence files, reproject them to match alaska_bawld\
+gswo = "/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/North_slope_occurrence"\
+gswo_change = os.listdir(gswo)\
+sorted_gswo = sorted(gswo_change)\
+for file in sorted_gswo:\
+    print(file)\
+\
+dest_crs = "EPSG:3338"\
+new_gswo_directory = "/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/reprojected_occurrence"\
+if not os.path.exists(new_gswo_directory):\
+    os.makedirs(new_gswo_directory)\
+tif_files = glob.glob(os.path.join(gswo, "*.tif"))\
+\
+for tif_file in tif_files:\
+    try:\
+        print(f"Reprojecting \{tif_file\}...")\
+        data = rio.open_rasterio(tif_file)\
+        if data.rio.crs != dest_crs:\
+            data_reprojected = data.rio.reproject(dest_crs)\
+            output_path = os.path.join(new_gswo_directory, os.path.basename(tif_file))\
+            data_reprojected.rio.to_raster(output_path)\
+            print(f"Reprojected \{tif_file\} to \{output_path\}")\
+    except Exception as e:\
+        print(f"Error reprojecting \{tif_file\}: \{e\}")\
+\
+#%%\
+northslope_bawld = gpd.read_file("/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/Alaska_BAWLD.shp")\
+northslope_bawld.columns\
+\
+columns_to_remove = ['GLA_L', 'GLA_H', 'ROC_L', 'ROC_H', 'TUN_L', 'TUN_H', 'BOR_L', 'BOR_H', 'WET_L', 'WET_H', 'PEB_L', 'PEB_H', 'WTU_L', 'WTU_H', 'MAR_L', 'MAR_H', 'BOG_L', 'BOG_H', 'FEN_L', 'FEN_H', 'LAK_L', 'LAK_H', 'LAL_L', 'LAL_H', 'MPL_L', 'MPL_H', 'MYL_L', 'MYL_H', 'MGL_L', 'MGL_H', 'SPL_L', 'SPL_H', 'SYL_L', 'SYL_H', 'SGL_L', 'SGL_H', 'RIV_L', 'RIV_H', 'LAR_L', 'LAR_H', 'SRR_L', 'SRR_H', 'SRP_L', 'SRP_H']\
+updated_northslope = northslope_bawld.drop(columns=columns_to_remove)\
+columns_to_plot = \'91\'92\
+\
+#%% Remove uneccessary columns from alaska_bawld GDF and plot the wetscape data\
+northslope_bawld = gpd.read_file("/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/Alaska_BAWLD.shp")\
+northslope_bawld.columns\
+\
+columns_to_remove = ['GLA', 'ROC', 'TUN', 'BOR', 'WET', 'PEB', 'WTU', 'MAR', 'BOG', 'FEN', 'LAK', 'LAL', 'MPL', 'MYL', 'MGL', 'SPL', 'SYL', 'SGL', 'RIV', 'LAR', 'SRR', 'SRP','GLA_L', 'GLA_H', 'ROC_L', 'ROC_H', 'TUN_L', 'TUN_H', 'BOR_L', 'BOR_H', 'WET_L', 'WET_H', 'PEB_L', 'PEB_H', 'WTU_L', 'WTU_H', 'MAR_L', 'MAR_H', 'BOG_L', 'BOG_H', 'FEN_L', 'FEN_H', 'LAK_L', 'LAK_H', 'LAL_L', 'LAL_H', 'MPL_L', 'MPL_H', 'MYL_L', 'MYL_H', 'MGL_L', 'MGL_H', 'SPL_L', 'SPL_H', 'SYL_L', 'SYL_H', 'SGL_L', 'SGL_H', 'RIV_L', 'RIV_H', 'LAR_L', 'LAR_H', 'SRR_L', 'SRR_H', 'SRP_L', 'SRP_H']\
+updated_northslope = northslope_bawld.drop(columns=columns_to_remove)\
+updated_northslope.to_file("/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/updated_northslope.shp")\
+updated_northslope = gpd.read_file("/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/updated_northslope.shp")\
+\
+column_to_plot = 'WETSCAPE'\
+unique_values = updated_northslope[column_to_plot].unique()\
+cmap = plt.get_cmap('Dark2', len(unique_values))\
+norm = mcolors.Normalize(vmin=min(unique_values), vmax=max(unique_values))\
+color_dict = \{value:cmap(norm(value)) for value in unique_values\}\
+fig, ax = plt.subplots(1, 1, figsize=(10,10))\
+for value in unique_values:\
+    subset = updated_northslope[updated_northslope[column_to_plot] == value]\
+    subset.plot(ax=ax, color=color_dict[value], label=value)\
+handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor=color_dict[value], markersize=10) for value in unique_values]\
+labels = [str(value) for value in unique_values]\
+ax.legend(handles, labels, title=column_to_plot) \
+plt.title('North Slope of Alaska by Wetscapes')\
+plt.xlabel('Longitude')\
+plt.ylabel('Latitude')\
+plt.show()\
+#%% Intersect the occurrences files (and non-zero pixels) with the Updated North Slope .shp \
+occurrences = "/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/reprojected_occurrence"\
+updated_northslope = "/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/updated_northslope.shp"\
+output_intersection_tifs = '/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/Intersected_tif'\
+if not os.path.exists(output_intersection_tifs):\
+    os.makedirs(output_intersection_tifs)\
+\
+northslope_bawld_gdf = gpd.read_file(updated_northslope)\
+\
+tif_files = glob.glob(os.path.join(occurrences, "*.tif"))\
+\
+non_zero_pixel_counts = []\
+normalized_areas = []\
+for tif_file in tif_files:\
+    try:\
+        print(f"Intersecting \{tif_file\} with Alaska/BAWLD...")\
+        data = rio.open_rasterio(tif_file, masked=True).squeeze()\
+        if northslope_bawld_gdf.crs != data.rio.crs:\
+            northslope_bawld_gdf_reprojected = northslope_bawld_gdf.to_crs(data.rio.crs)\
+        else:\
+            northslope_bawld_gdf_reprojected = northslope_bawld_gdf\
+        data_clipped = data.rio.clip(northslope_bawld_gdf.geometry, northslope_bawld_gdf.crs, drop=True)\
+        non_zero_pixels = (data_clipped.values > 0).sum()\
+        non_zero_pixel_counts.append((os.path.basename(tif_file), non_zero_pixels))\
+        print(f"Non-zero pixels in \{tif_file\} after intersection: \{non_zero_pixels\}")\
+        \
+        pixel_area = abs(data.rio.transform()[0] * data.rio.transform()[4])\
+        \
+        total_area = non_zero_pixels * pixel_area\
+        normalized_areas.append((os.path.basename(tif_file), total_area))\
+        print(f"Total area of non-zero (water) pixels in \{tif_file\}: \{total_area:.2f\} square units")\
+\
+        output_intersection = os.path.join(output_intersection_tifs, os.path.basename(tif_file))\
+        data_clipped.rio.to_raster(output_intersection)\
+        print(f"Intersected \{tif_file\} and saved to \{output_intersection\}")\
+    except Exception as e:\
+        print(f"Error processing \{tif_file\}: \{e\}")\
+df_non_zero_pixels = pd.DataFrame(non_zero_pixel_counts, columns=['Filename', 'NonZeroPixels'])\
+df_normalized_areas = pd.DataFrame(normalized_areas, columns=['Filename', 'TotalWaterArea'])\
+\
+fig, ax = plt.subplots(figsize=(12, 6))\
+df_normalized_areas.plot(kind='bar', x='Filename', y='NormalizedArea', ax=ax, color='skyblue', legend=False)\
+plt.title('Normalized Areas of Non-Zero Pixels')\
+plt.xlabel('Filename')\
+plt.ylabel('Normalized Area (Square Units)')\
+plt.xticks(rotation=90)\
+plt.tight_layout()\
+plt.show()\
+\
+#%% Making a visual representation \
+\
+df = pd.DataFrame(non_zero_pixel_counts, columns=['Filename', 'NonZeroPixels'])\
+\
+fig, ax = plt.subplots(1, 1, figsize=(10,10))\
+northslope_bawld_gdf_reprojected.plot(ax=ax, color='none', edgecolor='blue', linewidth=0.5)\
+\
+for tif_file in tif_files:\
+    try:\
+        data_clipped = rio.open_rasterio(os.path.join(output_intersection_tifs, os.path.basename(tif_file)), masked=True).squeeze()\
+        bounds = data.rio.bounds()\
+        extent = [bounds[0], bounds[2], bounds[1], bounds[3]]\
+        ax.imshow(data_clipped, extent=extent, cmap='Blues', alpha=0.5, origin='upper')\
+    \
+    except Exception as e:\
+        print(f"Error plotting \{tif_file\}: \{e\}")\
+        \
+plt.title('Intersected Areas with North Slope Boundary')\
+plt.xlabel('Longitude')\
+plt.ylabel('Latitude')\
+plt.show()\
+\
+fig, ax = plt.subplots(figsize=(12, 6))\
+df.plot(kind='bar', x='Filename', y='NonZeroPixels', ax=ax, color='skyblue', legend=False)\
+plt.title('Non-Zero Pixel Counts After Intersection')\
+plt.xlabel('Filename')\
+plt.ylabel('Non-Zero Pixel Count')\
+plt.xticks(rotation=90)\
+plt.tight_layout()\
+plt.show()\
+\
+#%% Overlay .tif files on .shp file\
+northslope_bawld_gdf\
+occurrences_files = [os.path.join(occurrences, f) for f in os.listdir(occurrences) if f.endswith('.tif')]\
+occurrences_data = [rasterio.open(path) for path in occurrences_files]\
+\
+all_bounds = []\
+for tif in occurrences_data:\
+    all_bounds.append(tif.bounds)\
+minx = min([b.left for b in all_bounds])\
+miny = min([b.bottom for b in all_bounds])\
+maxx = max([b.right for b in all_bounds])\
+maxy = max([b.top for b in all_bounds])\
+\
+cropped_northslope = northslope_bawld_gdf.cx[minx:maxx, miny:maxy]\
+\
+fig, ax = plt.subplots(1, 1, figsize=(12,8))\
+northslope_bawld_gdf.plot(ax=ax, color='none', edgecolor='black')\
+\
+ax.set_xlim(minx, maxx)\
+ax.set_ylim(miny, maxy)\
+\
+for tif in occurrences_data:\
+    tif_array = tif.read(1)\
+    water_mask = np.ma.masked_where(tif_array !=0, tif_array)\
+    show(water_mask, transform=tif.transform, ax=ax, cmap='Blues', alpha=0.7)\
+    \
+plt.xlabel('Longitude', fontsize=12)\
+plt.ylabel('Latitude', fontsize=12)\
+plt.title('Overlay of Water Pixels from .tif Files on the North Slope', fontsize=14)\
+\
+ax.set_aspect('equal')\
+plt.show()\
+\
+#%% Next Step... Non-zero pixels associated w/ wetscapes\
+#Caluclate nonzero pixels of the .tif files \
+intersected_files = glob.glob("/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/Intersected_tif/*.tif")\
+\
+for tif_file in intersected_files: \
+    try: \
+        print(f"Processing \{tif_file\}...")\
+        data = rio.open_rasterio(tif_file, masked=True)\
+        non_zero_pixels = np.count_nonzero(data.values)\
+        print(f"Number of non-zero pixels in \{tif_file\}: \{non_zero_pixels\}")\
+    except Exception as e:\
+        print(f"Error processing \{tif_file\}: \{e\}")\
+\
+water_pixel_counts = pd.DataFrame(0, index=northslope_bawld_gdf['WETSCAPE'].unique(), columns=['water_pixel_count'])\
+\
+for tif_file in intersected_files:\
+    try:\
+        print(f"Processing \{tif_file\}...")\
+        data = rio.open_rasterio(tif_file, masked=True)\
+        if data.rio.crs != northslope_bawld_gdf.crs:\
+            data = data.rio.reproject(northslope_bawld_gdf.crs)\
+            print(f"Reprojected CRS of \{tif_file\} to \{land_cover.crs\}")\
+        tif_bounds = data.rio.bounds()\
+        print(f"Bounds of \{tif_file\}: \{tif_bounds\}")\
+        tif_geometry = gpd.GeoDataFrame(geometry=[box(*tif_bounds)], crs=northslope_bawld_gdf.crs)\
+        if not northslope_bawld_gdf.intersects(tif_geometry.unary_union).any():\
+            print(f"No overlap between \{tif_file\} and the shapefile geometries.")\
+            continue\
+        for land_cover_type in northslope_bawld_gdf['WETSCAPE'].unique():\
+            shapes_gdf = northslope_bawld_gdf[northslope_bawld_gdf['WETSCAPE'] == land_cover_type]\
+            print(f"Processing WETSCAPE type: \{land_cover_type\}, with \{len(shapes_gdf)\} geometries")\
+            \
+            masked_data = data.rio.clip(shapes_gdf.geometry, northslope_bawld_gdf.crs, drop=True)\
+\
+            if np.count_nonzero(masked_data.values) == 0:\
+                print(f"No non-zero pixels found for WETSCAPE type: \{land_cover_type\} in \{tif_file\}")\
+            else:\
+                water_pixel_count = np.count_nonzero(masked_data.values)\
+                print(f"Non-zero pixels for WETSCAPE type: \{land_cover_type\} in \{tif_file\}: \{water_pixel_count\}")\
+                \
+                water_pixel_counts.at[land_cover_type, 'water_pixel_count'] += water_pixel_count\
+        \
+        print(f"Processed \{tif_file\}")\
+    except Exception as e:\
+        print(f"Error processing \{tif_file\}: \{e\}")\
+        \
+# Plot the water pixel counts for each WETSCAPE type\
+water_pixel_counts_df = water_pixel_counts.reset_index()\
+water_pixel_counts_df.columns = ['WETSCAPE_Type', 'Water_Pixel_Count']\
+sns.set_style("whitegrid")\
+plt.figure(figsize=(10, 6))\
+barplot = sns.barplot(x='WETSCAPE_Type', y='Water_Pixel_Count', data=water_pixel_counts_df, palette='Blues_d')\
+plt.xlabel('WETSCAPE Type', fontsize=12)\
+plt.ylabel('Water Pixel Count', fontsize=12)\
+plt.title('Water Pixel Count in Each WETSCAPE Type', fontsize=14)\
+for i, bar in enumerate(barplot.patches):\
+    bar_height = bar.get_height()\
+    barplot.text(\
+        bar.get_x() + bar.get_width() / 2,\
+        bar_height,\
+        f'\{int(bar_height)\}', \
+        ha='center', va='bottom', fontsize=10, color='black')\
+plt.tight_layout()\
+plt.show()       \
+\
+#%%\
+normalized_areas = []\
+for tif_file in tif_files:\
+    try:\
+        print(f"Processing \{tif_file\} with Alaska/BAWLD...")\
+        pixel_area = abs(data.rio.transorm()[0] * data.rio.transform()[4])\
+        total_area = non_zero_pixels * pixel_area\
+        normalized_areas.append((os.path.basename(tif_file), total_area))\
+        print(f"Total area of non-zero pixels in \{tif_file\}: \{total_area:.2f\} square units")\
+    except Exception as e:\
+        print(f"Error processing \{tif_file\}: \{e\}")\
+\
+#%% Normalizing for differences in area of water bodies\
+northslope_bawld_gdf = gpd.read_file(updated_northslope)\
+northslope_bawld_gdf['area'] = northslope_bawld_gdf.geometry.area\
+area_by_wetscape = northslope_bawld_gdf.groupby('WETSCAPE')['area'].sum()\
+print(area_by_wetscape)\
+\
+northslope_bawld_gdf['area'] = northslope_bawld_gdf.geometry.area\
+area_by_wetscape = northslope_bawld_gdf.groupby('WETSCAPE')['area'].sum()\
+print(area_by_wetscape)\
+\
+# Normalize the water pixel counts by area\
+water_pixel_counts = df_non_zero_pixels.set_index('Filename')\
+water_pixel_counts['WETSCAPE'] = water_pixel_counts.index.map(lambda x: x.split('_')[1])  # Adjust based on actual filename format\
+water_pixel_counts['area'] = water_pixel_counts['WETSCAPE'].map(area_by_wetscape)\
+water_pixel_counts['normalized_water_pixel_count'] = water_pixel_counts['NonZeroPixels'] / water_pixel_counts['area']\
+print(water_pixel_counts)\
+\
+# Normalize the total water area by WETSCAPE type\
+df_normalized_areas = df_normalized_areas.set_index('Filename')\
+df_normalized_areas['WETSCAPE'] = df_normalized_areas.index.map(lambda x: x.split('_')[1])  # Adjust based on actual filename format\
+df_normalized_areas['area'] = df_normalized_areas['WETSCAPE'].map(area_by_wetscape)\
+df_normalized_areas['normalized_water_area'] = df_normalized_areas['TotalWaterArea'] / df_normalized_areas['area']\
+print(df_normalized_areas)\
+\
+\
+plt.tight_layout()\
+plt.show()\
+\
+sns.set_style("whitegrid")\
+plt.figure(figsize=(10, 6))\
+barplot = sns.barplot(x='WETSCAPE_Type', y='Normalized_Water_Pixel_Count', data=water_pixel_counts_df, palette='Blues_d')\
+\
+plt.xlabel('WETSCAPE Type', fontsize=12)\
+plt.ylabel('Normalized Water Pixel Count', fontsize=12)\
+plt.title('Normalized Water Pixel Count in Each WETSCAPE Type', fontsize=14)\
+\
+for i, bar in enumerate(barplot.patches):\
+    bar_height = bar.get_height()\
+    barplot.text(\
+        bar.get_x() + bar.get_width() / 2,\
+        bar_height,\
+        f'\{bar_height:.2e\}',  # Using scientific notation for readability\
+        ha='center', va='bottom', fontsize=10, color='black'\
+    )\
+\
+plt.tight_layout()\
+\
+plt.show()\
+\
+#%% New attempt at normalization\
+\
+import geopandas as gpd\
+import rasterio\
+import numpy as np\
+from rasterio.mask import mask\
+from shapely.geometry import box\
+\
+# Load the shapefile\
+shapefile_path = '/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/updated_northslope.shp'\
+wetscapes = gpd.read_file(shapefile_path)\
+\
+# Load the raster data\
+occcurrence_160 = '/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/Intersected_tif/occurrence_160W_80Nv1_4_2021 copy.tif'\
+with rasterio.open(occcurrence_160) as src:\
+    # Get the bounds of the raster\
+    raster_bounds = src.bounds\
+    pixel_area = src.res[0] * src.res[1]  # Calculate the area of each pixel\
+\
+# Create a bounding box from the raster bounds\
+raster_bbox = box(raster_bounds.left, raster_bounds.bottom, raster_bounds.right, raster_bounds.top)\
+\
+wetscapes_clipped = wetscapes[wetscapes.intersects(raster_bbox)]\
+\
+wetscape_column = 'WETSCAPE'\
+\
+# Get unique wetscapes\
+unique_wetscapes = wetscapes_clipped[wetscape_column].unique()\
+\
+# Dictionary to store total area of each wetscape\
+wetscape_areas = \{\}\
+\
+# Calculate the total area for each wetscape\
+for wetscape in unique_wetscapes:\
+    wetscape_area = wetscapes_clipped[wetscapes_clipped[wetscape_column] == wetscape].geometry.area.sum()\
+    wetscape_areas[wetscape] = wetscape_area\
+\
+# Print the results\
+for wetscape, area in wetscape_areas.items():\
+    print(f"Total area of wetscape \{wetscape\}: \{area\} square meters")\
+\
+# Re-open the raster data to perform masking\
+with rasterio.open(occcurrence_160) as src:\
+    # Calculate water pixels for each wetscape\
+    water_pixels_per_wetscape = \{\}\
+\
+    for wetscape in unique_wetscapes:\
+        # Get the geometries for the current wetscape\
+        shapes = [feature["geometry"] for feature in wetscapes_clipped[wetscapes_clipped[wetscape_column] == wetscape].__geo_interface__["features"]]\
+        \
+        # Mask the raster with the current wetscape\
+        out_image, out_transform = mask(src, shapes, crop=True)\
+        out_image = out_image[0]\
+\
+        # Count the number of water pixels (assuming water pixels have a value greater than 0)\
+        water_pixel_count = np.sum(out_image > 0)\
+\
+        # Store the count in the dictionary\
+        water_pixels_per_wetscape[wetscape] = water_pixel_count\
+\
+# Normalize the number of water pixels for each wetscape\
+normalized_water_pixels_per_wetscape = \{\}\
+water_area_per_wetscape = \{\}\
+\
+for wetscape in unique_wetscapes:\
+    total_area_wetscape = wetscape_areas[wetscape]\
+    water_pixel_count = water_pixels_per_wetscape[wetscape]\
+    water_area = water_pixel_count * pixel_area\
+    water_area_per_wetscape[wetscape] = water_area\
+\
+# Print the water area results\
+for wetscape, area in water_area_per_wetscape.items():\
+    print(f"Water area for wetscape \{wetscape\}: \{area\} square meters")\
+\
+normalized_water_area_per_wetscape = \{\}\
+\
+for wetscape in unique_wetscapes:\
+    total_area_wetscape = wetscape_areas[wetscape]\
+    water_area = water_area_per_wetscape[wetscape]\
+    normalized_water_area = water_area / total_area_wetscape\
+    normalized_water_area_per_wetscape[wetscape] = normalized_water_area\
+\
+# Print the normalized water area results\
+for wetscape, normalized_area in normalized_water_area_per_wetscape.items():\
+    print(f"Normalized water area for wetscape \{wetscape\}: \{normalized_area\}")\
+\
+percentage_water_area_per_wetscape = \{\}\
+\
+for wetscape in unique_wetscapes:\
+    total_area_wetscape = wetscape_areas[wetscape]\
+    water_area = water_area_per_wetscape[wetscape]\
+    percentage_water_area = (water_area / total_area_wetscape) * 100\
+    percentage_water_area_per_wetscape[wetscape] = percentage_water_area\
+\
+# Print the percentage water area results\
+for wetscape, percentage in percentage_water_area_per_wetscape.items():\
+    print(f"Percentage of water area for wetscape \{wetscape\}: \{percentage:.2f\}%")\
+\
+import matplotlib.pyplot as plt\
+\
+# Data from the previous calculation\
+wetscape_ids = list(normalized_water_pixels_per_wetscape.keys())\
+normalized_values = list(normalized_water_pixels_per_wetscape.values())\
+\
+# Create the bar chart\
+plt.figure(figsize=(12, 6))\
+bars = plt.bar(wetscape_ids, normalized_values, color='skyblue')\
+\
+# Add titles and labels\
+plt.title('Normalized Water Pixels for Each Wetscape', fontsize=16)\
+plt.xlabel('Wetscape ID', fontsize=14)\
+plt.ylabel('Normalized Water Pixels', fontsize=14)\
+\
+# Add value labels on top of the bars\
+for bar in bars:\
+    yval = bar.get_height()\
+    plt.text(bar.get_x() + bar.get_width() / 2, yval + 0.01, f"\{yval:.2f\}", ha='center', va='bottom', fontsize=12)\
+\
+# Customize ticks and grid\
+plt.grid(axis='y', linestyle='--', alpha=0.7)\
+\
+# Adjust layout and show the plot\
+plt.tight_layout()\
+plt.show()\
+\
+#%%\
+import geopandas as gpd\
+import rasterio\
+import numpy as np\
+from rasterio.mask import mask\
+from shapely.geometry import box\
+\
+# Load the shapefile\
+shapefile_path = '/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/updated_northslope.shp'\
+wetscapes = gpd.read_file(shapefile_path)\
+\
+# Load the raster data\
+raster_path = '/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/Intersected_tif/occurrence_160W_80Nv1_4_2021 copy.tif'\
+with rasterio.open(raster_path) as src:\
+    # Get the bounds of the raster\
+    raster_bounds = src.bounds\
+    pixel_area_m2 = src.res[0] * src.res[1]  # Calculate the area of each pixel in square meters\
+    pixel_area_km2 = pixel_area_m2 / 1e6  # Convert the pixel area to square kilometers\
+\
+# Create a bounding box from the raster bounds\
+raster_bbox = box(raster_bounds.left, raster_bounds.bottom, raster_bounds.right, raster_bounds.top)\
+\
+# Clip the shapefile to the raster bounds\
+wetscapes_clipped = wetscapes[wetscapes.intersects(raster_bbox)]\
+\
+# Assuming the shapefile has an attribute/column that identifies each wetscape, for example, 'wetscape_id'\
+# Replace 'wetscape_id' with the actual column name in your shapefile\
+wetscape_column = 'WETSCAPE'\
+\
+# Get unique wetscapes\
+unique_wetscapes = wetscapes_clipped[wetscape_column].unique()\
+\
+# Dictionary to store total area of each wetscape\
+wetscape_areas_km2 = \{\}\
+\
+# Calculate the total area for each wetscape and convert to square kilometers\
+for wetscape in unique_wetscapes:\
+    wetscape_area_m2 = wetscapes_clipped[wetscapes_clipped[wetscape_column] == wetscape].geometry.area.sum()\
+    wetscape_areas_km2[wetscape] = wetscape_area_m2 / 1e6  # Convert to square kilometers\
+\
+# Re-open the raster data to perform masking\
+with rasterio.open(raster_path) as src:\
+    # Calculate water pixels for each wetscape\
+    water_pixels_per_wetscape = \{\}\
+\
+    for wetscape in unique_wetscapes:\
+        # Get the geometries for the current wetscape\
+        shapes = [feature["geometry"] for feature in wetscapes_clipped[wetscapes_clipped[wetscape_column] == wetscape].__geo_interface__["features"]]\
+        \
+        # Mask the raster with the current wetscape\
+        try:\
+            out_image, out_transform = mask(src, shapes, crop=True)\
+            out_image = out_image[0]\
+\
+            # Count the number of water pixels (assuming water pixels have a value greater than 0)\
+            water_pixel_count = np.sum(out_image > 0)\
+        except ValueError:\
+            # If there is no overlap, set water pixel count to 0\
+            water_pixel_count = 0\
+\
+        # Store the count in the dictionary\
+        water_pixels_per_wetscape[wetscape] = water_pixel_count\
+\
+# Calculate water area for each wetscape in square kilometers\
+water_area_per_wetscape_km2 = \{\}\
+\
+for wetscape in unique_wetscapes:\
+    water_pixel_count = water_pixels_per_wetscape[wetscape]\
+    water_area_km2 = water_pixel_count * pixel_area_km2  # in square kilometers\
+    water_area_per_wetscape_km2[wetscape] = water_area_km2\
+\
+# Calculate the percentage of each wetscape covered by water\
+percentage_water_area_per_wetscape = \{\}\
+\
+for wetscape in unique_wetscapes:\
+    total_area_wetscape_km2 = wetscape_areas_km2[wetscape]  # in square kilometers\
+    water_area_km2 = water_area_per_wetscape_km2[wetscape]  # in square kilometers\
+    percentage_water_area = (water_area_km2 / total_area_wetscape_km2) * 100\
+    percentage_water_area_per_wetscape[wetscape] = percentage_water_area\
+\
+# Print the percentage water area results\
+for wetscape, percentage in percentage_water_area_per_wetscape.items():\
+    print(f"Percentage of water area for wetscape \{wetscape\}: \{percentage:.2f\}%")\
+}
