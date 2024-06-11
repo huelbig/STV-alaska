@@ -1,11 +1,5 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2759
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+***Import Packages needed***
 
-\f0\fs24 \cf0 # Import Packages needed\
 import geopandas as gpd\
 import pandas as pd\
 import numpy as np\
@@ -22,7 +16,8 @@ import seaborn as sns\
 from rasterio.plot import show\
 from shapely.geometry import Point\
 \
-#%% Upload shapefiles, align coordinate systems, spatial join\
+***Upload shapefiles, align coordinate systems, spatial join***
+
 bawld_data = gpd.read_file('/Volumes/MastersWork/GDSthings/BAWLD_V1___Shapefile/BAWLD_V1.shp')\
 north_slope = gpd.read_file('/Volumes/MastersWork/GDSthings/BAWLD_V1___Shapefile/421-north-slope-borough-boundary/nsb_boundary.shp')\
 if bawld_data.crs != north_slope.crs:\
@@ -31,7 +26,7 @@ if bawld_data.crs != north_slope.crs:\
 alaska_bawld = gpd.sjoin(bawld_data, north_slope, how="inner", predicate="within")\
 alaska_bawld.to_file('/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/Alaska_BAWLD.shp')\
 \
-#%% Upload GSWO occurrence files, reproject them to match alaska_bawld\
+***Upload GSWO occurrence files, reproject them to match alaska_bawld***
 gswo = "/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/North_slope_occurrence"\
 gswo_change = os.listdir(gswo)\
 sorted_gswo = sorted(gswo_change)\
@@ -64,7 +59,8 @@ columns_to_remove = ['GLA_L', 'GLA_H', 'ROC_L', 'ROC_H', 'TUN_L', 'TUN_H', 'BOR_
 updated_northslope = northslope_bawld.drop(columns=columns_to_remove)\
 columns_to_plot = \'91\'92\
 \
-#%% Remove uneccessary columns from alaska_bawld GDF and plot the wetscape data\
+***Remove uneccessary columns from alaska_bawld GDF and plot the wetscape data***
+
 northslope_bawld = gpd.read_file("/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/Alaska_BAWLD.shp")\
 northslope_bawld.columns\
 \
@@ -89,7 +85,9 @@ plt.title('North Slope of Alaska by Wetscapes')\
 plt.xlabel('Longitude')\
 plt.ylabel('Latitude')\
 plt.show()\
-#%% Intersect the occurrences files (and non-zero pixels) with the Updated North Slope .shp \
+
+***Intersect the occurrences files (and non-zero pixels) with the Updated North Slope .shp***
+
 occurrences = "/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/reprojected_occurrence"\
 updated_northslope = "/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/updated_northslope.shp"\
 output_intersection_tifs = '/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/Intersected_tif'\
@@ -169,7 +167,8 @@ plt.xticks(rotation=90)\
 plt.tight_layout()\
 plt.show()\
 \
-#%% Overlay .tif files on .shp file\
+***Overlay .tif files on .shp file***
+
 northslope_bawld_gdf\
 occurrences_files = [os.path.join(occurrences, f) for f in os.listdir(occurrences) if f.endswith('.tif')]\
 occurrences_data = [rasterio.open(path) for path in occurrences_files]\
@@ -202,7 +201,8 @@ plt.title('Overlay of Water Pixels from .tif Files on the North Slope', fontsize
 ax.set_aspect('equal')\
 plt.show()\
 \
-#%% Next Step... Non-zero pixels associated w/ wetscapes\
+***Next Step... Non-zero pixels associated w/ wetscapes***
+
 #Caluclate nonzero pixels of the .tif files \
 intersected_files = glob.glob("/Volumes/MastersWork/GDSthings/GDS Spring 2024 copy/FinalProject/Intersected_tif/*.tif")\
 \
@@ -279,7 +279,7 @@ for tif_file in tif_files:\
     except Exception as e:\
         print(f"Error processing \{tif_file\}: \{e\}")\
 \
-#%% Normalizing for differences in area of water bodies\
+***Normalizing for differences in area of water bodies***
 northslope_bawld_gdf = gpd.read_file(updated_northslope)\
 northslope_bawld_gdf['area'] = northslope_bawld_gdf.geometry.area\
 area_by_wetscape = northslope_bawld_gdf.groupby('WETSCAPE')['area'].sum()\
